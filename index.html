@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Play Level Up 計畫 — Play Games Rewards（Play Games 獎勵）領獎端到端流程</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --border: #e2e5eb;
+      --text: #1a1d26;
+      --muted: #5c6370;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --code-bg: #1e2433;
+      --code-text: #e8ecf4;
+      --warn-bg: #fff8e6;
+      --warn-border: #f5c542;
+      --ok-bg: #ecfdf5;
+      --ok-border: #34d399;
+      --sidebar-w: 270px;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .layout { display: flex; min-height: 100vh; }
+    nav.sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.25rem 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    nav.sidebar .brand {
+      padding: 0 1.25rem 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: .75rem;
+    }
+    nav.sidebar .brand h1 {
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: Consolas, "Cascadia Code", monospace;
+    }
+    nav.sidebar .brand p { font-size: .78rem; color: var(--muted); margin-top: .25rem; }
+    nav.sidebar a {
+      display: block;
+      padding: .4rem 1.25rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .88rem;
+      border-left: 3px solid transparent;
+    }
+    nav.sidebar a:hover, nav.sidebar a.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-left-color: var(--accent);
+    }
+    nav.sidebar .group {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      padding: .75rem 1.25rem .35rem;
+    }
+    main { flex: 1; max-width: 920px; padding: 2rem 2.5rem 4rem; }
+    header.hero {
+      background: #1e3a8a;
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 2rem 2.25rem;
+      margin-bottom: 2rem;
+    }
+    header.hero .kicker {
+      font-size: .78rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      opacity: .8;
+      margin-bottom: .5rem;
+    }
+    header.hero h1 { font-size: 1.45rem; font-weight: 700; line-height: 1.4; margin-bottom: .6rem; }
+    header.hero .desc { opacity: .92; font-size: .95rem; max-width: 720px; }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.25rem;
+    }
+    section h2 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 2px solid var(--accent-soft);
+    }
+    section h3 { font-size: 1rem; margin: 1.25rem 0 .6rem; }
+    p { margin-bottom: .75rem; }
+    p:last-child { margin-bottom: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: .75rem 0; }
+    th, td { border: 1px solid var(--border); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+    th { background: #f0f3f8; font-weight: 600; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      font-size: .86em;
+      background: #eef1f6;
+      padding: .1em .35em;
+      border-radius: 4px;
+      color: #c7254e;
+    }
+    ul, ol { margin: .5rem 0 .75rem 1.25rem; }
+    li { margin-bottom: .4rem; }
+    .callout { border-radius: 8px; padding: .85rem 1rem; margin: .75rem 0; font-size: .92rem; }
+    .callout-warn { background: var(--warn-bg); border-left: 4px solid var(--warn-border); }
+    .callout-ok { background: var(--ok-bg); border-left: 4px solid var(--ok-border); }
+    .qa { border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; margin: .65rem 0; background: #fafbfc; }
+    .qa .q { font-weight: 700; margin-bottom: .35rem; }
+    .qa .a { color: var(--muted); font-size: .95rem; }
+    .file { font-family: Consolas, monospace; font-size: .82rem; }
+    .steps { counter-reset: step; list-style: none; margin-left: 0; }
+    .steps li {
+      counter-increment: step;
+      padding: .55rem 0 .55rem 2.5rem;
+      position: relative;
+      border-bottom: 1px dashed var(--border);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: .45rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cards { display: grid; gap: .75rem; margin: .85rem 0; }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .85rem 1rem;
+      background: #fafbfc;
+    }
+    .card .num {
+      display: inline-block;
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.4rem;
+      margin-right: .4rem;
+    }
+    .card strong { display: inline; }
+    .card p { margin: .4rem 0 0; color: var(--muted); font-size: .92rem; }
+    .plain { font-size: 1.02rem; }
+    @media (max-width: 860px) {
+      .layout { display: block; }
+      nav.sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      main { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="brand">
+        <h1>AI 範例分享</h1>
+        <p>Play Games Rewards 領獎流程</p>
+      </div>
+      <div class="group">分享大綱</div>
+      <a href="#story">概述</a>
+      <a href="#why">背景與目標</a>
+      <a href="#with-ai">與 AI 的協作方式</a>
+      <a href="#sdk">PGS v2 串接</a>
+      <a href="#flow">領獎流程</a>
+      <a href="#signin">登入視窗與綁定</a>
+      <a href="#pitfalls">問題與決策</a>
+      <a href="#files">異動檔案</a>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <div class="kicker">AI 範例分享</div>
+        <h1>Google Play Level Up 計畫 — Play Games Rewards（Play Games 獎勵）領獎端到端流程</h1>
+        <p class="desc">玩家在 Play Games 取得獎勵後，進入遊戲即可自動入帳。本頁說明 Android 如何串接 PGS v2（初始化、自動登入、取得 Auth Code、解鎖成就），以及獎勵如何發放到領獎中心。</p>
+      </header>
+
+      <section id="story">
+        <h2>概述</h2>
+        <p class="plain">Play Games Rewards 的獎勵來自 Play Games，不是遊戲商城內購。玩家進入 App 後，Client 需查詢尚未消耗的購買，交由 Server 發放到領獎中心，成功後再向 Google 消耗該筆紀錄。</p>
+        <p>這條流程能運作，前提是 Android App 已串接 <strong>Play Games Services v2</strong>：初始化 SDK、優先靜默登入、取得 Auth Code 供 Server 綁定帳號，並在對應時機解鎖成就。完成綁定後，再查詢是否有未領取的 Rewards。</p>
+        <p>Google 要求在<strong>啟動 App</strong>與<strong>回到前景</strong>時各查詢一次。進入領獎中心前會再查詢一次，確保畫面刷新時獎勵已入帳。</p>
+        <div class="callout callout-ok">
+          入帳成功後<strong>不另跳提示</strong>。玩家至領獎中心領取，流程與既有補單相同。
+        </div>
+      </section>
+
+      <section id="why">
+        <h2>背景與目標</h2>
+        <p>這是 Google Play Level Up 計畫的要求：遊戲需支援 Play Games Rewards。</p>
+        <p>平台既有補單流程，用於商城付款後尚未入帳的購買。Play Games 獎勵<strong>並非遊戲內下單</strong>，商品編號也不同；若沿用同一條補單，Server 會視為一般內購，導致發獎錯誤或失敗。</p>
+        <p>因此 Rewards 需獨立處理：查詢 Google → 請 Server 發獎至領獎中心 → 成功後再消耗該筆購買。</p>
+        <div class="callout callout-ok">
+          查詢與分流寫在大廳／商店流程，<strong>不寫入金流 plugin</strong>。後續更新金流套件時，Rewards 邏輯不會被覆蓋。
+        </div>
+      </section>
+
+      <section id="with-ai">
+        <h2>與 AI 的協作方式</h2>
+        <p>規格不是一次貼完就結束。較有效的做法是先對齊架構，再分段實作，最後以問答收斂行為。</p>
+        <ol class="steps">
+          <li>對齊架構：Rewards 與商城補單分流；金流 plugin 只負責查詢 Google，不負責發獎。</li>
+          <li>接上端到端：查詢未消耗購買 → Server 發放至領獎中心 → 成功後消耗。進入領獎中心前先完成發獎再刷新畫面。</li>
+          <li>若舊檔覆蓋導致無關功能被刪除（例如大富翁、條件式任務），請 AI 比對 git，<strong>只還原被誤刪的內容</strong>，不回退 Rewards。</li>
+          <li>行為不明確時，直接確認時機與條件。下列問題都已反映到實際邏輯。</li>
+        </ol>
+
+        <h3>實際提問並調整過的行為</h3>
+        <div class="qa">
+          <div class="q">成就領獎時，是否要向 Google 消耗該筆購買？</div>
+          <div class="a">不需要。消耗發生在 Server 確認發獎成功之後。玩家之後在成就頁領獎，不會再次消耗。</div>
+        </div>
+        <div class="qa">
+          <div class="q">裝置未登入 Play 商店時，進 App 哪些時機會跳出 Play Games 登入？</div>
+          <div class="a">僅在進入大廳時可能顯示。Loading 與金流初始化不會顯示。正式版未登入則每次進大廳都顯示；測試版同一個 App 生命週期只顯示一次。</div>
+        </div>
+        <div class="qa">
+          <div class="q">登入回傳未開啟 Play Games 獎勵開關時，能否送出發獎請求？</div>
+          <div class="a">不能。未開啟則不向 Server 請求發獎，也不向 Google 消耗，避免舊環境被誤發。</div>
+        </div>
+        <div class="qa">
+          <div class="q">測試版減少登入視窗後，是否仍能綁定 Play Games 帳號？</div>
+          <div class="a">可以拆開。是否顯示登入視窗，與是否送出綁定無關。進大廳只要取得 Auth Code 就送綁定；Auth Code 為空則不送，送出也會失敗。</div>
+        </div>
+        <div class="qa">
+          <div class="q">官方 Unity Plugin 能否直接使用？</div>
+          <div class="a">目前工程無法滿足該 Plugin 所需的 Gradle 8。因此以 AndroidJavaObject 橋接 Play Games Android SDK，涵蓋 initialize、isAuthenticated、signIn、requestServerSideAccess、unlock。</div>
+        </div>
+      </section>
+
+      <section id="sdk">
+        <h2>PGS v2 串接</h2>
+        <p>獎勵要自動入帳，App 必須先串接 <strong>Play Games Services v2</strong>。官方 Unity Plugin 需要 Gradle 8，與現有工程不相容，因此以 <code>AndroidJavaObject</code> 呼叫 Android SDK，封裝於 <code>PgsNativeBridge</code>。</p>
+        <p>進入大廳後依序處理下列四項：</p>
+
+        <div class="cards">
+          <div class="card">
+            <span class="num">1</span><strong>初始化 SDK</strong>
+            <p>首次進入大廳建立 <code>PgsManager</code>，於 <code>Awake</code> 呼叫 <code>PlayGamesSdk.initialize</code>。僅在 Android 真機執行，Editor 會略過。</p>
+          </div>
+          <div class="card">
+            <span class="num">2</span><strong>自動登入</strong>
+            <p>先呼叫 <code>isAuthenticated</code>。若已登入 Play Games，不顯示登入視窗；未登入則依正式／測試版規則決定是否呼叫 <code>signIn()</code>。</p>
+          </div>
+          <div class="card">
+            <span class="num">3</span><strong>取得 Auth Code</strong>
+            <p>以 Web Client ID 呼叫 <code>requestServerSideAccess</code>。取得有效值後才送出 <code>VALIDATE_PGS_ID</code>，由 Server 將 Play Games 帳號綁定至遊戲帳號。空值不送。</p>
+          </div>
+          <div class="card">
+            <span class="num">4</span><strong>解鎖成就</strong>
+            <p>進入大廳時解鎖「第一次登入遊戲」。遊戲內完成 FB／Line／Apple 等帳號綁定後，再解鎖「帳號綁定」。已解鎖的成就會記錄在本機，避免重複送出。</p>
+          </div>
+        </div>
+
+        <h3>進入大廳時的處理</h3>
+        <p><code>GameLobbyState</code> 進入大廳時呼叫 <code>PgsManager.OnEnterGameLobby()</code>。登入視窗與綁定封包分開執行：</p>
+        <ol>
+          <li>解鎖「第一次登入遊戲」成就</li>
+          <li>依規則決定是否顯示 Play Games 登入視窗</li>
+          <li>靜默取得 Auth Code；取得後送出綁定封包</li>
+        </ol>
+
+        <h3>初始化</h3>
+        <p>進入大廳時呼叫 <code>PgsManager.EnsureExist()</code>。物件建立後立即初始化 SDK，並以 <code>DontDestroyOnLoad</code> 保留至整個 App 生命週期。Google 的 callback 位於 Android 執行緒，需先排回 Unity 主執行緒，再更新狀態或送出封包。</p>
+
+        <h3>自動登入</h3>
+        <p>PGS v2 優先使用靜默登入：</p>
+        <ul>
+          <li>已登入 Play Games：<code>isAuthenticated</code> 為 true，不顯示登入視窗</li>
+          <li>未登入：才可能顯示系統登入畫面（<code>signIn</code>）</li>
+          <li>Loading 與金流初始化不會顯示登入視窗，僅在進入大廳時判斷</li>
+          <li>玩家於視窗完成登入後，若綁定尚未送出，會再取得一次 Auth Code</li>
+        </ul>
+        <p>正式版與測試版的顯示次數規則見下一節。</p>
+
+        <h3>取得 Auth Code</h3>
+        <p>Auth Code 供 Server 向 Google 交換 Play Games 帳號，不會呈現給玩家。</p>
+        <ol>
+          <li>Client 以 Play Console 的 <strong>OAuth Web Client ID</strong> 呼叫 <code>requestServerSideAccess</code></li>
+          <li>Google 回傳 <code>auth_code</code></li>
+          <li>字串為空時視為未登入，<strong>不送出</strong>綁定封包</li>
+          <li>有值則送出 <code>VALIDATE_PGS_ID</code>。登入回傳未開啟成就系統時也不送出，以相容舊包</li>
+          <li>同一 App 生命週期綁定成功後會記錄狀態，無須每次進入大廳都送出；需更新證明時再強制重取</li>
+        </ol>
+        <div class="callout callout-ok">
+          規格不另外接入 Google Sign-In SDK。以 Play Games v2 的 <code>requestServerSideAccess</code> 即可完成成就系統綁定。
+        </div>
+
+        <h3>解鎖成就</h3>
+        <p>Play Console 目前有兩個一次性成就，無需累積次數：</p>
+        <table>
+          <thead>
+            <tr>
+              <th>成就</th>
+              <th>解鎖時機</th>
+              <th>觸發方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>第一次登入遊戲</td>
+              <td>進入大廳</td>
+              <td>已接線：<code>OnEnterGameLobby</code></td>
+            </tr>
+            <tr>
+              <td>遊戲內帳號綁定</td>
+              <td>FB／Line／Apple／IGS 等綁定成功</td>
+              <td>已提供 <code>NotifyAccountBindingSuccess</code>，待綁定流程呼叫</td>
+            </tr>
+          </tbody>
+        </table>
+        <ul>
+          <li>實際呼叫 Google 的 API 為 <code>AchievementsClient.unlock(成就 ID)</code></li>
+          <li>已解鎖的成就以本機紀錄避免重複送出</li>
+          <li>另預留累積用的 <code>increment</code>，以及開啟 Play Games 成就列表；目前兩個成就皆不需累積</li>
+          <li>遊戲內成就頁領獎時<strong>不會</strong>再向 Google unlock。遊戲內成就對應的 <code>google_play_id</code> 改由 Server 處理</li>
+        </ul>
+      </section>
+
+      <section id="flow">
+        <h2>領獎流程</h2>
+        <p>從查詢到入帳分為四步：</p>
+        <div class="cards">
+          <div class="card">
+            <span class="num">1</span><strong>查詢尚未消耗的購買</strong>
+            <p>啟動遊戲、回到前景，或進入領獎中心前，各查詢一次。</p>
+          </div>
+          <div class="card">
+            <span class="num">2</span><strong>辨識 Play Games 獎勵後走獨立發獎</strong>
+            <p>商品編號以 <code>pg_reward</code> 開頭，或為 <code>jgp_160_01</code>，視為 Rewards。其餘未消耗購買仍走既有商城補單。</p>
+          </div>
+          <div class="card">
+            <span class="num">3</span><strong>由 Server 發放至領獎中心</strong>
+            <p>Server 成功後，獎勵出現在領獎中心。此步失敗則不向 Google 消耗，下次仍可查到同一筆。</p>
+          </div>
+          <div class="card">
+            <span class="num">4</span><strong>成功後才消耗該筆購買</strong>
+            <p>消耗後 Google 不會再次回傳同一筆。失敗則保留，待下次查詢再發放，避免尚未入帳就被消耗。</p>
+          </div>
+        </div>
+
+        <h3>查詢時機</h3>
+        <ol>
+          <li>金流初始化成功（進入遊戲時）</li>
+          <li>App 從背景回到前景</li>
+          <li>開啟領獎中心前（先完成發獎，再刷新可領內容）</li>
+        </ol>
+
+        <h3>功能開關</h3>
+        <p>每次登入先關閉「可發送 Play Games 獎勵」。登入回傳含 <code>play_games_reward_system</code> 且為 true 時才開啟。未開啟則視為該環境尚未上線此功能。</p>
+      </section>
+
+      <section id="signin">
+        <h2>登入視窗與綁定</h2>
+        <p>進入大廳時，登入視窗與綁定封包<strong>分開處理</strong>：</p>
+        <ul>
+          <li><strong>登入視窗</strong>：引導玩家登入 Play Games。正式版未登入則每次進入大廳都顯示；測試版同一個 App 生命週期只顯示一次，重新啟動後才再顯示。</li>
+          <li><strong>綁定帳號</strong>：將 Play Games 帳號綁定至成就系統。不依是否顯示視窗決定——取得 Auth Code 即送出；為空則不送。</li>
+        </ul>
+        <table>
+          <thead>
+            <tr>
+              <th>情況</th>
+              <th>是否顯示登入視窗</th>
+              <th>是否送出綁定</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>正式版，尚未登入 Play Games</td>
+              <td>每次進入大廳都顯示</td>
+              <td>取得 Auth Code 才送出</td>
+            </tr>
+            <tr>
+              <td>測試版，尚未登入</td>
+              <td>同一個 App 生命週期最多一次</td>
+              <td>取得 Auth Code 才送出</td>
+            </tr>
+            <tr>
+              <td>已靜默登入成功</td>
+              <td>不顯示</td>
+              <td>照常送出</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-warn">
+          未登入 Play Games 時，Google 無法核發 Auth Code。此時送出綁定必定失敗，因此空值直接略過。
+        </div>
+      </section>
+
+      <section id="pitfalls">
+        <h2>問題與決策</h2>
+        <ul>
+          <li><strong>舊檔覆蓋誤刪無關程式</strong>：接入 Rewards 時，大廳內不相干的功能曾被一併覆蓋（大富翁、條件式任務、iPad 轉屏）。之後比對 git，只還原誤刪內容，保留 Rewards。</li>
+          <li><strong>入帳成功仍跳出日文提示</strong>：文案寫死日文，也不符合「至領獎中心領取」的體驗，因此移除。</li>
+          <li><strong>減少登入視窗時連綁定一併停送</strong>：測試版為降低打擾，一度連成就綁定都不送。之後改為視窗規則獨立，綁定仍會嘗試。</li>
+          <li><strong>舊環境尚未開啟功能</strong>：Server 未開啟開關即視為功能關閉，不對舊包送出發獎請求。</li>
+          <li><strong>官方 Unity Plugin 與 Gradle 不相容</strong>：PGS v2 Unity Plugin 需要 Gradle 8，本專案改以 <code>AndroidJavaObject</code> 呼叫 Android SDK。</li>
+          <li><strong>Google callback 不在 Unity 執行緒</strong>：需先排回主執行緒，才能送出封包或更新狀態。</li>
+        </ul>
+      </section>
+
+      <section id="files">
+        <h2>異動檔案</h2>
+        <p>Android 以自訂橋接串接 PGS v2：初始化 → 優先靜默登入 → 取得 Auth Code 完成綁定 → 解鎖成就。Rewards 走獨立發獎，成功後才向 Google 消耗。</p>
+        <table>
+          <thead><tr><th>檔案</th><th>說明</th></tr></thead>
+          <tbody>
+            <tr><td class="file">PgsNativeBridge.cs</td><td>呼叫 Android SDK：初始化、查詢登入狀態、顯示登入、取得 Auth Code、解鎖／累積成就</td></tr>
+            <tr><td class="file">PgsManager.cs</td><td>進入大廳的入口：登入視窗規則、送出綁定、解鎖成就</td></tr>
+            <tr><td class="file">PgsConfig.cs</td><td>Web Client ID、Rewards 商品編號、成就 ID</td></tr>
+            <tr><td class="file">PgsAchievementTracker.cs</td><td>各成就的解鎖時機</td></tr>
+            <tr><td class="file">HttpValidatePgsId.cs</td><td>將 Auth Code 送至 Server，綁定 Play Games 帳號</td></tr>
+            <tr><td class="file">GameLobbyState.cs</td><td>進入大廳時啟動上述流程</td></tr>
+            <tr><td class="file">ArkStore.cs</td><td>查詢未消耗購買，並分流 Rewards 與一般補單</td></tr>
+            <tr><td class="file">PgsRewardManager.cs</td><td>請 Server 發獎；成功後消耗；讀取功能開關</td></tr>
+            <tr><td class="file">HttpVerifyPgsReward.cs</td><td>向 Server 請求發放該筆 Rewards</td></tr>
+            <tr><td class="file">HttpSGCLogin.cs</td><td>登入時讀取 Play Games 獎勵開關</td></tr>
+            <tr><td class="file">AwardCenterState.cs</td><td>開啟領獎中心前先完成發獎再刷新</td></tr>
+            <tr><td class="file">GameManager.cs</td><td>回到前景時再次查詢未消耗購買</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script>
+    const links = document.querySelectorAll("nav.sidebar a");
+    const secs = [...links].map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id));
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    secs.forEach(s => io.observe(s));
+  </script>
+</body>
+</html>
